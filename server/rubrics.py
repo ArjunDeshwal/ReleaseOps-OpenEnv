@@ -231,6 +231,12 @@ class ReleaseOpsRubric:
 
         raw = sum(r.score * r.weight for r in results)
         final_score = max(0.0, min(1.0, raw - forbidden_penalty))
+        
+        # Clamp to strictly within (0, 1) — validator requires 0 < score < 1
+        if final_score <= 0.0:
+            final_score = 0.001
+        elif final_score >= 1.0:
+            final_score = 0.999
 
         return {
             "score": round(final_score, 3),
