@@ -23,15 +23,11 @@ import requests
 from openai import OpenAI
 
 # ── Config ──────────────────────────────────────────────────────────────────────
-API_BASE_URL = os.getenv("API_BASE_URL", "https://router.huggingface.co/v1")
-API_KEY      = os.getenv("OPENAI_API_KEY") or os.getenv("HF_TOKEN")
-MODEL_NAME   = (
-    os.getenv("MODEL_NAME")
-    or os.getenv("LLM_MODEL_NAME")
-    or os.getenv("INFERENCE_MODEL")
-    or "Qwen/Qwen2.5-72B-Instruct"
-)  # fallback chain for env var names
-ENV_URL      = os.getenv("ENV_URL", "http://localhost:7860").rstrip("/")
+# Validator injects these - no fallbacks allowed
+API_BASE_URL = os.environ.get("API_BASE_URL") or os.environ.get("OPENAI_BASE_URL", "https://router.huggingface.co/v1")
+API_KEY      = os.environ.get("API_KEY") or os.environ.get("OPENAI_API_KEY") or os.environ.get("HF_TOKEN")
+MODEL_NAME   = os.environ.get("MODEL_NAME", "Qwen/Qwen2.5-72B-Instruct")
+ENV_URL      = os.environ.get("ENV_URL", "http://localhost:7860").rstrip("/")
 
 
 # ── Structured logging helpers ──────────────────────────────────────────────────
