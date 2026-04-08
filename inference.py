@@ -46,7 +46,12 @@ def log_step(step: int, action: str, reward: float, done: bool, error: Optional[
 def log_end(success: bool, steps: int, score: float, rewards: List[float]):
     """Emit [END] log with final results."""
     rewards_str = ",".join(f"{r:.2f}" for r in rewards)
-    print(f"[END] success={str(success).lower()} steps={steps} score={score:.2f} rewards={rewards_str}", flush=True)
+    print(f"[END] success={str(success).lower()} steps={steps} score={score:.3f} rewards={rewards_str}", flush=True)
+
+
+def normalize_score(value: float) -> float:
+    """Force score to validator-safe strict bounds: 0 < score < 1."""
+    return max(0.001, min(0.999, float(value)))
 
 TASKS       = ["easy_001", "easy_002", "medium_001", "medium_002", "hard_001", "hard_002"]
 MAX_STEPS   = 14
@@ -296,11 +301,7 @@ def run_task(llm: OpenAI, task_id: str) -> dict:
             if done:
                 break
 
-        score = obs_dict.get("final_score") or 0.0
-        if score <= 0.0:
-            score = 0.001
-        elif score >= 1.0:
-            score = 0.999
+        score = normalize_score(obs_dict.get("final_score") or 0.0)
         success = score >= 0.5
 
     except Exception as e:
