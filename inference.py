@@ -297,12 +297,16 @@ def run_task(llm: OpenAI, task_id: str) -> dict:
                 break
 
         score = obs_dict.get("final_score") or 0.0
+        if score <= 0.0:
+            score = 0.001
+        elif score >= 1.0:
+            score = 0.999
         success = score >= 0.5
 
     except Exception as e:
         print(f"[DEBUG] Task {task_id} failed with error: {e}", flush=True)
         success = False
-        score = 0.0
+        score = 0.001
     finally:
         log_end(success, step, score, rewards)
 

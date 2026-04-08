@@ -881,6 +881,11 @@ class ReleaseOpsEnvironment(Environment):
             + 0.10 * efficiency
         )
         score = max(0.0, min(1.0, raw_score - forbidden_penalty))
+        # Hackathon validator requires strict bounds: 0 < score < 1
+        if score <= 0.0:
+            score = 0.001
+        elif score >= 1.0:
+            score = 0.999
 
         return {
             "score": round(score, 3),
