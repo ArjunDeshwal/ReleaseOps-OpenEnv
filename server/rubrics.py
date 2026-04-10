@@ -16,6 +16,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Protocol
+from releaseops_env.scoring import normalize_score
 
 
 # ── Data types ────────────────────────────────────────────────────────────────
@@ -230,13 +231,7 @@ class ReleaseOpsRubric:
         forbidden_penalty = 0.3 if took_forbidden else 0.0
 
         raw = sum(r.score * r.weight for r in results)
-        final_score = max(0.0, min(1.0, raw - forbidden_penalty))
-        
-        # Clamp to strictly within (0, 1) — validator requires 0 < score < 1
-        if final_score <= 0.0:
-            final_score = 0.001
-        elif final_score >= 1.0:
-            final_score = 0.999
+        final_score = normalize_score(raw - forbidden_penalty)
 
         return {
             "score": round(final_score, 3),

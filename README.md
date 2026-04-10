@@ -110,7 +110,7 @@ curl -X POST http://localhost:7860/baseline
 | `rollout_phase` | str | precheck → canary → promoted \| rolled_back |
 | `time_remaining` | int | Steps remaining before timeout |
 | `cumulative_reward` | float | Running reward total |
-| `final_score` | float\|null | Grader score 0.0–1.0 (set on terminal step) |
+| `final_score` | float\|null | Grader score strictly between 0 and 1 (set on terminal step) |
 
 ## Grading Formula
 
@@ -122,7 +122,7 @@ score = 0.35 * evidence_coverage
       - 0.30 * forbidden_penalty
 ```
 
-Scores clamped to [0.0, 1.0]. Fully deterministic — no LLM judge.
+Scores normalized to strict bounds (0, 1), i.e. [0.001, 0.999]. Fully deterministic — no LLM judge.
 
 - **evidence_coverage**: fraction of required evidence sources the agent inspected
 - **risk_signal_discovery**: fraction of required risk signals the environment emitted during the episode (objective — measures what the agent actually observed, not what strings it typed)
@@ -151,6 +151,16 @@ require `query_telemetry` on multiple services to surface pre-deployment metric 
 static diff/test inspection cannot reveal.
 
 Heuristic baseline runs via `curl -X POST http://localhost:7860/baseline` — no LLM required.
+
+## Validator Parity Checks
+
+```bash
+openenv validate
+python3 scripts/validator_parity_check.py
+pytest -q
+```
+
+CI runs the same checks in `.github/workflows/validator-parity.yml` on every push/PR.
 
 ## Rollout State Machine
 

@@ -7,6 +7,7 @@ from releaseops_env.models import (
     RiskSignal,
     ToolResult,
 )
+from releaseops_env.scoring import format_score, is_strict_score, normalize_score
 
 
 # Client import is deferred to avoid circular imports and to allow
@@ -26,4 +27,7 @@ __all__ = [
     "ReleaseState",
     "RiskSignal",
     "ToolResult",
+    "normalize_score",
+    "format_score",
+    "is_strict_score",
 ]

@@ -17,10 +17,11 @@ import json
 import os
 import textwrap
 import time
-from typing import List, Optional
+from typing import List, Optional, TypedDict
 
 import requests
 from openai import OpenAI
+from releaseops_env.scoring import format_score, normalize_score
 
 # ── Config ──────────────────────────────────────────────────────────────────────
 # Validator injects these - no fallbacks allowed
@@ -49,9 +50,29 @@ def log_end(success: bool, steps: int, score: float, rewards: List[float]):
     print(f"[END] success={str(success).lower()} steps={steps} score={score:.3f} rewards={rewards_str}", flush=True)
 
 
-def normalize_score(value: float) -> float:
-    """Force score to validator-safe strict bounds: 0 < score < 1."""
-    return max(0.001, min(0.999, float(value)))
+class TaskResult(TypedDict):
+    task_id: str
+    final_score: float
+    steps_taken: int
+    done: bool
+    errors: List[str]
+
+
+def make_task_result(
+    task_id: str, final_score: float, steps_taken: int, done: bool, errors: List[str]
+) -> TaskResult:
+    return {
+        "task_id": task_id,
+        "final_score": normalize_score(final_score),
+        "steps_taken": int(steps_taken),
+        "done": bool(done),
+        "errors": errors,
+    }
+
+
+def emit_task_result(result: TaskResult) -> None:
+    """Emit machine-parseable per-task result JSON."""
+    print(json.dumps({"type": "task_result", **result}, sort_keys=True), flush=True)
 
 TASKS       = ["easy_001", "easy_002", "medium_001", "medium_002", "hard_001", "hard_002"]
 MAX_STEPS   = 14
@@ -217,9 +238,11 @@ def run_task(llm: OpenAI, task_id: str) -> dict:
     log_start(task_id, MODEL_NAME)
     
     rewards: List[float] = []
+    errors: List[str] = []
     step = 0
+    done = False
     success = False
-    score = 0.0
+    score = 0.001
     env = SimpleEnvClient(base_url=ENV_URL)
 
     try:
@@ -308,14 +331,18 @@ def run_task(llm: OpenAI, task_id: str) -> dict:
         print(f"[DEBUG] Task {task_id} failed with error: {e}", flush=True)
         success = False
         score = 0.001
-    finally:
-        log_end(success, step, score, rewards)
+        errors.append(str(e))
 
-    return {
-        "task_id": task_id,
-        "final_score": score,
-        "steps_taken": step,
-    }
+    log_end(success, step, score, rewards)
+    task_result = make_task_result(
+        task_id=task_id,
+        final_score=score,
+        steps_taken=step,
+        done=done,
+        errors=errors,
+    )
+    emit_task_result(task_result)
+    return task_result
 
 
 # ── Entry point ──────────────────────────────────────────────────────────────────
@@ -328,8 +355,10 @@ def main():
         total = 0.0
         for r in results:
             total += r["final_score"]
-            print(f"  {r['task_id']:15s}  score={r['final_score']:.3f}  steps={r['steps_taken']}")
-        print(f"  {'AVERAGE':15s}  score={total / len(results):.3f}")
+            print(
+                f"  {r['task_id']:15s}  score={format_score(r['final_score'])}  steps={r['steps_taken']}"
+            )
+        print(f"  {'AVERAGE':15s}  score={format_score(total / len(results))}")
         return results
     except Exception as e:
         print(f"[ERROR] Fatal error in main: {e}", flush=True)

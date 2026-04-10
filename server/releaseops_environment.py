@@ -16,6 +16,7 @@ from releaseops_env.models import (
     RiskSignal,
     ToolResult,
 )
+from releaseops_env.scoring import normalize_score
 
 TASKS_DIR = Path(__file__).parent.parent / "tasks"
 INCIDENTS_DB = Path(__file__).parent.parent / "data" / "incidents.db"
@@ -880,9 +881,7 @@ class ReleaseOpsEnvironment(Environment):
             + 0.30 * decision_score
             + 0.10 * efficiency
         )
-        score = max(0.0, min(1.0, raw_score - forbidden_penalty))
-        # Keep output strictly inside (0, 1), even after downstream formatting/rounding.
-        score = max(0.001, min(0.999, score))
+        score = normalize_score(raw_score - forbidden_penalty)
 
         return {
             "score": round(score, 3),
